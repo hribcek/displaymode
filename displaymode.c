@@ -195,21 +195,26 @@ static void PrintMode(CGDisplayModeRef mode) {
 	   native ? " N" : "");
 }
 
-// Prints all display modes for the main display.  Returns 0 on success.
-static int PrintModes(CGDirectDisplayID display) {
+static CFDictionaryRef CreateDisplayModeOptions(CGDirectDisplayID display) {
     CGDisplayModeRef current_mode = CGDisplayCopyDisplayMode(display);
     CFStringRef option_keys[1] = { kCGDisplayShowDuplicateLowResolutionModes };
     CFBooleanRef option_values[1] = { kCFBooleanTrue };
-    CFDictionaryRef options = CFDictionaryCreate(
+    return CFDictionaryCreate(
 	/* allocator= */ NULL,
 	(const void **) option_keys,
 	(const void **) option_values,
 	/* numValues= */ 1,
 	&kCFTypeDictionaryKeyCallBacks,
 	&kCFTypeDictionaryValueCallBacks);
+}
 
+// Prints all display modes for the main display.  Returns 0 on success.
+static int PrintModes(CGDirectDisplayID display) {
+    CGDisplayModeRef current_mode = CGDisplayCopyDisplayMode(display);
+    CFDictionaryRef options = CreateDisplayModeOptions(display);
     CFArrayRef modes = CGDisplayCopyAllDisplayModes(display, options);
     CFRelease(options);
+
     const CFIndex count = CFArrayGetCount(modes);
 
     Boolean has_current = 0;
@@ -277,7 +282,10 @@ static CGError GetDisplayID(uint32_t display_index,
 // The caller owns the returned mode.
 static CGDisplayModeRef GetModeMatching(const struct ParsedArgs * parsed_args,
                                         const CGDirectDisplayID display) {
-    CFArrayRef modes = CGDisplayCopyAllDisplayModes(display, NULL);
+    CFDictionaryRef options = CreateDisplayModeOptions(display);
+    CFArrayRef modes = CGDisplayCopyAllDisplayModes(display, options);
+    CFRelease(options);
+
     const CFIndex count = CFArrayGetCount(modes);
 
     CGDisplayModeRef matched_mode = NULL;
