@@ -15,7 +15,7 @@
 // limitations under the License.
 //
 // Compilation:
-//   clang -std=c11 -lm -framework CoreFoundation -framework CoreGraphics -o displaymode displaymode.c
+//   clang -std=c11 -lm -framework CoreFoundation -framework CoreGraphics -framework IOKit -o displaymode displaymode.c
 //
 // Usage (to change the resolution to 1440x900):
 //   displaymode t 1440 900
@@ -28,6 +28,7 @@
 
 #include <CoreFoundation/CoreFoundation.h>
 #include <CoreGraphics/CoreGraphics.h>
+#include <IOKit/graphics/IOGraphicsTypes.h>
 #include <MacTypes.h>
 
 // Name and version to display with "v" option.
@@ -182,13 +183,16 @@ static void ShowUsage(void) {
 
 // Prints the resolution and refresh rate for a display mode.
 static void PrintMode(CGDisplayModeRef mode) {
+    const uint32_t io_flags = CGDisplayModeGetIOFlags(mode);
+    const bool native = io_flags & kDisplayModeNativeFlag;
     const size_t width = CGDisplayModeGetWidth(mode);
     const size_t height = CGDisplayModeGetHeight(mode);
     const double refresh_rate = CGDisplayModeGetRefreshRate(mode);
     const bool usable_for_desktop =
         CGDisplayModeIsUsableForDesktopGUI(mode);
-    printf("%zu x %zu @%.1fHz%s", width, height, refresh_rate,
-           usable_for_desktop ? "" : " !");
+    printf("%zu x %zu @%.1fHz%s%s", width, height, refresh_rate,
+           usable_for_desktop ? "" : " !",
+	   native ? " N" : "");
 }
 
 // Prints all display modes for the main display.  Returns 0 on success.

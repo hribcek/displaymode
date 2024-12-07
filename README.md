@@ -61,7 +61,7 @@ Display 1:
 800 x 600 @75.0Hz *
 ```
 
-where each row is the width x height in pixels.  `*` indicates the current mode, and `!` indicates modes that are not usable for the desktop.
+where each row is the width x height in pixels.  `*` indicates the current mode, `N` indicates it's a "native" mode, and `!` indicates modes that are not usable for the desktop.
 
 ## Other options
 
