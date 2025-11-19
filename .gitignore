@@ -8,3 +8,27 @@
 /bin/
 /bin/tests/
 
+
+# macOS-specific files
+# Finder and resource fork artifacts
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon\r
+._*
+
+# Spotlight index, trash, and temporary macOS folders
+.Spotlight-V100/
+.Trashes
+.fseventsd/
+.DocumentRevisions-V100/
+
+# macOS debug symbols and Xcode user files
+*.dSYM/
+*.xcuserdata/
+*.xcuserstate
+
+# Xcode Derived Data and workspace settings
+DerivedData/
+.xccheckout
+
