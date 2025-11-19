@@ -32,3 +32,44 @@ Icon\r
 DerivedData/
 .xccheckout
 
+# Xcode and development
+# Xcode temporary files, user files, and build outputs
+*.xcworkspace
+*.xcworkspace/contents.xcworkspacedata
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+xcuserdata/
+*.xcuserdatad
+*.xcscmblueprint
+
+# Build products
+build/
+Build/
+*.app
+*.ipa
+*.dSYM
+*.o
+*.swp
+*.lock
+
+# Swift Package Manager
+.build/
+Packages/
+
+# CocoaPods
+Pods/
+
+# Carthage
+Carthage/Build
+
+# JetBrains IDEs
+.idea/
+*.iml
+
+# Other
+*.xcbuilddata
+*.hmap
+*.xccheckout
+
