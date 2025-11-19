@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 
 // Returns non-zero if "actual" is acceptable for the given specification.
 int MatchesRefreshRate(double specified, double actual) {
@@ -86,31 +87,63 @@ static void ParseModeInternal(const int argc, const char * argv[],
 
 // Parses the command-line arguments and returns them.
 struct ParsedArgs ParseArgs(int argc, const char * argv[]) {
-    struct ParsedArgs parsed_args = { 0 };
+    struct ParsedArgs parsed_args;
+    parsed_args.option = kOptionMissing;
+    parsed_args.literal_option = NULL;
+    parsed_args.width = 0;
+    parsed_args.height = 0;
+    parsed_args.refresh_rate = 0.0;
+    parsed_args.display_index = 0;
+    parsed_args.verbose = 0;
 
     if (argc <= 1) {
         return parsed_args;
     }
-    if (1 != (int)strlen(argv[kArgvOptionIndex])) {
-        return parsed_args;
+
+    // Check for long options (flags) and build filtered positional args
+    const char *positional[argc];
+    int pos_count = 0;
+    for (int i = 0; i < argc; ++i) {
+        if (argv[i] == NULL) continue;
+        if (strcmp(argv[i], "--help") == 0) {
+            parsed_args.option = kOptionLongHelp;
+            return parsed_args;
+        }
+        if (strcmp(argv[i], "--version") == 0) {
+            parsed_args.option = kOptionLongVersion;
+            return parsed_args;
+        }
+        if (strcmp(argv[i], "--verbose") == 0) {
+            parsed_args.verbose = 1;
+            continue;
+        }
+        positional[pos_count++] = argv[i];
     }
 
-    parsed_args.literal_option = argv[kArgvOptionIndex];
-    const char option = argv[kArgvOptionIndex][0];
-    switch (option) {
-        case kOptionSupportedModes:
-        case kOptionHelp:
-        case kOptionConfigureMode:
-        case kOptionVersion:
-            parsed_args.option = (enum Option)option;
-            break;
-        default:
-            // Leave parsed_args.option as kOptionMissing (0) to match original behavior.
-            break;
-    }
-
-    if (option == kOptionConfigureMode) {
-        ParseModeInternal(argc, argv, &parsed_args);
+    // Legacy single-letter options
+    if (pos_count > kArgvOptionIndex && 1 == (int)strlen(positional[kArgvOptionIndex])) {
+        parsed_args.literal_option = positional[kArgvOptionIndex];
+        const char option = positional[kArgvOptionIndex][0];
+        switch (option) {
+            case kOptionSupportedModes:
+                parsed_args.option = kOptionSupportedModes;
+                break;
+            case kOptionHelp:
+                parsed_args.option = kOptionHelp;
+                break;
+            case kOptionConfigureMode:
+                parsed_args.option = kOptionConfigureMode;
+                break;
+            case kOptionVersion:
+                parsed_args.option = kOptionVersion;
+                break;
+            default:
+                // Leave parsed_args.option as kOptionMissing (0) to match original behavior.
+                break;
+        }
+        if (option == kOptionConfigureMode) {
+            ParseModeInternal(pos_count, positional, &parsed_args);
+        }
     }
     return parsed_args;
 }

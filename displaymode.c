@@ -48,28 +48,73 @@ static const char kUsage[] =
     "      sets the display's width, height and (optionally) refresh rate\n\n"
     "  d\n"
     "      prints available resolutions for each display\n\n"
-    "  h\n"
+    "  h, --help\n"
     "      prints this message\n\n"
-    "  v\n"
-    "      prints version and copyright notice\n";
+    "  v, --version\n"
+    "      prints version and copyright notice\n\n"
+    "  --verbose\n"
+    "      enables verbose output\n";
 
 // Prints a message describing how to invoke the tool on the command line.
 static void ShowUsage(void) {
     puts(kUsage);
 }
 
-// Prints the resolution and refresh rate for a display mode.
+
+#include "displaymode_format.h"
+
+// Extract info and print
 static void PrintMode(CGDisplayModeRef mode) {
     if (mode == NULL) {
         return;
     }
-    const size_t width = CGDisplayModeGetWidth(mode);
-    const size_t height = CGDisplayModeGetHeight(mode);
-    const double refresh_rate = CGDisplayModeGetRefreshRate(mode);
-    const bool usable_for_desktop =
-        CGDisplayModeIsUsableForDesktopGUI(mode);
-    printf("%zu x %zu @%.1fHz%s", width, height, refresh_rate,
-           usable_for_desktop ? "" : " !");
+    struct DisplayModeInfo info = {0};
+    info.width = CGDisplayModeGetWidth(mode);
+    info.height = CGDisplayModeGetHeight(mode);
+    info.refresh_rate = CGDisplayModeGetRefreshRate(mode);
+    info.usable_for_desktop = CGDisplayModeIsUsableForDesktopGUI(mode);
+    // Aspect ratio calculation
+    int gcd = 1;
+    int a = (int)info.width, b = (int)info.height;
+    while (b != 0) {
+        int t = b;
+        b = a % b;
+        a = t;
+    }
+    gcd = a;
+    info.aspect_w = (int)info.width / gcd;
+    info.aspect_h = (int)info.height / gcd;
+    // Pixel encoding (color depth)
+    CFStringRef pixelEncoding = CGDisplayModeCopyPixelEncoding(mode);
+    if (pixelEncoding) {
+        CFStringGetCString(pixelEncoding, info.pixelEncodingStr, sizeof(info.pixelEncodingStr), kCFStringEncodingUTF8);
+        CFRelease(pixelEncoding);
+    } else {
+        info.pixelEncodingStr[0] = '\0';
+    }
+    // Mode ID
+    info.mode_id = (int)CGDisplayModeGetIODisplayModeID(mode);
+    // Scaling/HiDPI info
+    info.isHiDPI = 0;
+    CFDictionaryRef dict = CGDisplayModeCopyPixelEncoding(mode) ? CGDisplayModeCopyAttributes(mode) : NULL;
+    if (dict) {
+        CFTypeRef val = CFDictionaryGetValue(dict, CFSTR("AppleCGDisplayModeIsScaled"));
+        if (val && CFGetTypeID(val) == CFBooleanGetTypeID() && CFBooleanGetValue((CFBooleanRef)val)) {
+            info.isHiDPI = 1;
+        }
+        CFRelease(dict);
+    }
+    // Display name/model
+    snprintf(info.displayName, sizeof(info.displayName), "Display");
+    // Resolution category
+    if (info.isHiDPI) strcpy(info.resCategory, "HiDPI");
+    else if (info.width < 1024 || info.height < 768) strcpy(info.resCategory, "LowRes");
+    else strcpy(info.resCategory, "Standard");
+    // Format and print
+    char out[256];
+    FormatDisplayModeInfo(&info, out, sizeof(out));
+    printf("%s", out);
+}
 }
 
 // Prints all display modes for the main display.  Returns 0 on success.
@@ -89,11 +134,10 @@ static int PrintModes(CGDirectDisplayID display) {
     }
 
     const CFIndex count = CFArrayGetCount(modes);
-
     Boolean has_current = 0;
-    for (CFIndex i = 0; i < count; ++i) {
+    for (size_t i = 0; i < (size_t)count; ++i) {
         CGDisplayModeRef mode =
-            (CGDisplayModeRef) CFArrayGetValueAtIndex(modes, i);
+            (CGDisplayModeRef)CFArrayGetValueAtIndex(modes, (CFIndex)i);
         if (mode == NULL) {
             continue;
         }
@@ -118,9 +162,8 @@ static int PrintModes(CGDirectDisplayID display) {
 
 static int PrintModesForAllDisplays(void) {
     CGDirectDisplayID displays[kMaxDisplays];
-    uint32_t num_displays;
-    CGError e =
-        CGGetActiveDisplayList(kMaxDisplays, &displays[0], &num_displays);
+    uint32_t num_displays = 0;
+    CGError e = CGGetActiveDisplayList(kMaxDisplays, &displays[0], &num_displays);
     if (e) {
         fprintf(stderr, "CGGetActiveDisplayList CGError: %d\n", e);
         return e;
@@ -134,14 +177,10 @@ static int PrintModesForAllDisplays(void) {
     return EXIT_SUCCESS;
 }
 
-// Returns the display ID (arbitrary integers) corresponding to the given
-// display index (0-indexed).
-static CGError GetDisplayID(uint32_t display_index,
-                            CGDirectDisplayID * display) {
+static CGError GetDisplayID(uint32_t display_index, CGDirectDisplayID *display) {
     CGDirectDisplayID displays[kMaxDisplays];
-    uint32_t num_displays;
-    CGError e =
-        CGGetActiveDisplayList(kMaxDisplays, &displays[0], &num_displays);
+    uint32_t num_displays = 0;
+    CGError e = CGGetActiveDisplayList(kMaxDisplays, &displays[0], &num_displays);
     if (e) {
         fprintf(stderr, "CGGetActiveDisplayList CGError: %d\n", e);
         return e;
@@ -155,10 +194,7 @@ static CGError GetDisplayID(uint32_t display_index,
     return kCGErrorSuccess;
 }
 
-// Returns the first mode whose resolution matches the width and height
-// specified in `parsed_args'.  Returns NULL if no modes matched.
-// The caller owns the returned mode.
-static CGDisplayModeRef GetModeMatching(const struct ParsedArgs * parsed_args,
+static CGDisplayModeRef GetModeMatching(const struct ParsedArgs *parsed_args,
                                         const CGDirectDisplayID display) {
     CFArrayRef modes = CGDisplayCopyAllDisplayModes(display, NULL);
     if (modes == NULL) {
@@ -167,11 +203,9 @@ static CGDisplayModeRef GetModeMatching(const struct ParsedArgs * parsed_args,
     const CFIndex count = CFArrayGetCount(modes);
 
     CGDisplayModeRef matched_mode = NULL;
-    // Set matched_mode to the first display mode matching the requested
-    // resolution.
-    for (CFIndex i = 0; i < count; ++i) {
-        CGDisplayModeRef const mode =
-            (CGDisplayModeRef) CFArrayGetValueAtIndex(modes, i);
+    for (size_t i = 0; i < (size_t)count; ++i) {
+        CGDisplayModeRef mode =
+            (CGDisplayModeRef)CFArrayGetValueAtIndex(modes, (CFIndex)i);
         if (mode == NULL) {
             continue;
         }
@@ -189,8 +223,7 @@ static CGDisplayModeRef GetModeMatching(const struct ParsedArgs * parsed_args,
     return matched_mode;
 }
 
-// Changes the resolution permanently for the user.
-static int ConfigureMode(const struct ParsedArgs * parsed_args) {
+static int ConfigureMode(const struct ParsedArgs *parsed_args) {
     CGDirectDisplayID display;
     CGError e;
     if ((e = GetDisplayID(parsed_args->display_index, &display))) {
@@ -198,20 +231,18 @@ static int ConfigureMode(const struct ParsedArgs * parsed_args) {
     }
 
     CGDisplayModeRef mode = GetModeMatching(parsed_args, display);
-    if (NULL == mode) {
+    if (mode == NULL) {
         if (parsed_args->refresh_rate == 0.0) {
             fprintf(stderr, "Could not find a mode for resolution %lux%lu\n",
                     parsed_args->width, parsed_args->height);
         } else {
-            fprintf(stderr, "Could not find a mode for resolution %lux%lu"
-                    " @%.1f\n",
+            fprintf(stderr, "Could not find a mode for resolution %lux%lu @%.1f\n",
                     parsed_args->width, parsed_args->height,
                     parsed_args->refresh_rate);
         }
         return -1;
     }
 
-    // Save the original resolution.
     CGDisplayModeRef original_mode = CGDisplayCopyDisplayMode(display);
     size_t original_width = 0;
     size_t original_height = 0;
@@ -223,7 +254,6 @@ static int ConfigureMode(const struct ParsedArgs * parsed_args) {
         CGDisplayModeRelease(original_mode);
     }
 
-    // Change the resolution.
     CGDisplayConfigRef config = NULL;
     if ((e = CGBeginDisplayConfiguration(&config))) {
         fprintf(stderr, "CGBeginDisplayConfiguration CGError: %d\n", e);
@@ -232,14 +262,12 @@ static int ConfigureMode(const struct ParsedArgs * parsed_args) {
     }
     if ((e = CGConfigureDisplayWithDisplayMode(config, display, mode, NULL))) {
         fprintf(stderr, "CGConfigureDisplayWithDisplayMode CGError: %d\n", e);
-        // Best-effort cancel and cleanup.
         CGCancelDisplayConfiguration(config);
         CGDisplayModeRelease(mode);
         return e;
     }
     if ((e = CGCompleteDisplayConfiguration(config, kCGConfigurePermanently))) {
         fprintf(stderr, "CGCompleteDisplayConfiguration CGError: %d\n", e);
-        // On failure, we can't be sure the configuration was applied; nothing more to do.
         CGDisplayModeRelease(mode);
         return e;
     }
@@ -258,38 +286,42 @@ static int ConfigureMode(const struct ParsedArgs * parsed_args) {
     return EXIT_SUCCESS;
 }
 
-int main(int argc, const char * argv[]) {
+int main(int argc, const char *argv[]) {
     const struct ParsedArgs parsed_args = ParseArgs(argc, argv);
     switch (parsed_args.option) {
-        case kOptionMissing:
+        case kOptionMissing: {
             fputs("Missing option; server mode is not supported\n\n", stderr);
             ShowUsage();
             break;
-
-        case kOptionInvalid:
+        }
+        case kOptionInvalid: {
             fprintf(stderr, "Invalid option: '%s'\n\n",
                     parsed_args.literal_option);
             ShowUsage();
             break;
-
-        case kOptionInvalidMode:
+        }
+        case kOptionInvalidMode: {
             fputs("Invalid mode\n", stderr);
             break;
-
+        }
         case kOptionConfigureMode:
+            if (parsed_args.verbose) {
+                printf("[VERBOSE] Configuring display mode...\n");
+            }
             return ConfigureMode(&parsed_args);
-
         case kOptionHelp:
+        case kOptionLongHelp:
             ShowUsage();
             return EXIT_SUCCESS;
-
         case kOptionSupportedModes:
+            if (parsed_args.verbose) {
+                printf("[VERBOSE] Printing supported display modes...\n");
+            }
             return PrintModesForAllDisplays();
-
         case kOptionVersion:
+        case kOptionLongVersion:
             printf("%s\nCopyright 2019-2023 Dean Scarff\n", kProgramVersion);
             return EXIT_SUCCESS;
-
         default:
             break;
     }

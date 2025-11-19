@@ -48,11 +48,41 @@ static void test_parse_args_invalid_mode(void) {
     ASSERT(p3.option == kOptionInvalidMode, "invalid width -> invalid mode");
 }
 
+static void test_parse_args_help_flag(void) {
+    const char *argv[] = { "prog", "--help", NULL };
+    struct ParsedArgs p = ParseArgs(2, argv);
+    ASSERT(p.option == kOptionHelp || p.option == kOptionLongHelp, "--help flag parsed as help option");
+}
+
+static void test_parse_args_version_flag(void) {
+    const char *argv[] = { "prog", "--version", NULL };
+    struct ParsedArgs p = ParseArgs(2, argv);
+    ASSERT(p.option == kOptionVersion || p.option == kOptionLongVersion, "--version flag parsed as version option");
+}
+
+static void test_parse_args_verbose_flag(void) {
+    const char *argv[] = { "prog", "t", "1024", "768", "--verbose", NULL };
+    struct ParsedArgs p = ParseArgs(6, argv);
+    ASSERT(p.option == kOptionConfigureMode, "option == t with --verbose");
+    ASSERT(p.width == 1024UL, "width parsed 1024");
+    ASSERT(p.height == 768UL, "height parsed 768");
+}
+
+static void test_parse_args_missing_args(void) {
+    const char *argv[] = { "prog", "t", NULL };
+    struct ParsedArgs p = ParseArgs(2, argv);
+    ASSERT(p.option == kOptionInvalidMode, "missing width/height -> invalid mode");
+}
+
 int main(void) {
     test_matches_refresh_rate();
     test_parse_args_simple();
     test_parse_args_with_refresh_and_display();
     test_parse_args_invalid_mode();
+    test_parse_args_help_flag();
+    test_parse_args_version_flag();
+    test_parse_args_verbose_flag();
+    test_parse_args_missing_args();
 
     if (tests_failed == 0) {
         printf("All %d tests passed.\n", tests_run);

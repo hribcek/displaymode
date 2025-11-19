@@ -23,33 +23,48 @@ If you don't have Xcode installed, then you can download the binary (note this i
 3. `chmod a+x displaymode`
 4. `codesign -f -s "-" -v displaymode`
 
+
 ## Usage
 
-To change the resolution of the main display to 1440x900, run the command:
-
+### Change Resolution
+To change the resolution of the main display to 1440x900:
 ```
 ./displaymode t 1440 900
 ```
 
-To change the resolution of the secondary display to 1440x900, run the command:
-
+To change the resolution of the secondary display to 1440x900:
 ```
 ./displaymode t 1440 900 1
 ```
 
-You can also specify a particular refresh rate:
-
+Specify a particular refresh rate:
 ```
 ./displaymode t 1440 900 @60
 ```
 
-You can get a list of active displays and available resolutions by running:
-
+### List Available Modes
+Get a list of active displays and available resolutions:
 ```
 ./displaymode d
 ```
-The output will be a table like:
 
+### Standard CLI Flags
+Print help message:
+```
+./displaymode --help
+```
+
+Print version information:
+```
+./displaymode --version
+```
+
+Enable verbose output:
+```
+./displaymode t 1440 900 --verbose
+```
+
+### Output Example
 ```
 Display 0 (MAIN):
 2560 x 1600 @60.0Hz *
@@ -60,11 +75,10 @@ Display 0 (MAIN):
 Display 1:
 800 x 600 @75.0Hz *
 ```
-
-where each row is the width x height in pixels.  `*` indicates the current mode, and `!` indicates modes that are not usable for the desktop.
+`*` indicates the current mode, and `!` indicates modes not usable for the desktop.
 
 ## Other options
 
-`./displaymode h` prints a summary of the options.
+`./displaymode h` or `./displaymode --help` prints a summary of the options.
 
-`./displaymode v` prints the version and copyright notice.
+`./displaymode v` or `./displaymode --version` prints the version and copyright notice.

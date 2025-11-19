@@ -2,4 +2,6 @@
 !*.xcodeproj/project.pbxproj
 !*.xcodeproj/xcshareddata/
 !*.xcworkspace/contents.xcworkspacedata
+# Ignore the displaymode target
+/displaymode
 
