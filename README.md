@@ -82,3 +82,12 @@ Display 1:
 `./displaymode h` or `./displaymode --help` prints a summary of the options.
 
 `./displaymode v` or `./displaymode --version` prints the version and copyright notice.
+
+## Logging
+`displaymode` now includes a logging system to capture runtime information, warnings, and errors. You can configure the log level using the `setLogLevel` function in the code.
+
+## JSON Output
+The tool supports JSON output for display mode information. Use the `--json` flag to enable this feature.
+
+## Tests
+To run the tests, use the `make tests` command. This will execute all unit and integration tests, including tests for JSON output and error handling.

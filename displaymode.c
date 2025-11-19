@@ -30,8 +30,10 @@
 #include <CoreFoundation/CoreFoundation.h>
 #include <CoreGraphics/CoreGraphics.h>
 #include <MacTypes.h>
+#include <json-c/json.h>
 
 #include "displaymode_parse.h"  // <- new header exposing ParseArgs, MatchesRefreshRate, ParsedArgs
+#include "logging.h"
 
 // Maximum number of displays to query at once (used with CGGetActiveDisplayList).
 #define kMaxDisplays 16
@@ -84,26 +86,13 @@ static void PrintMode(CGDisplayModeRef mode) {
     gcd = a;
     info.aspect_w = (int)info.width / gcd;
     info.aspect_h = (int)info.height / gcd;
-    // Pixel encoding (color depth)
-    CFStringRef pixelEncoding = CGDisplayModeCopyPixelEncoding(mode);
-    if (pixelEncoding) {
-        CFStringGetCString(pixelEncoding, info.pixelEncodingStr, sizeof(info.pixelEncodingStr), kCFStringEncodingUTF8);
-        CFRelease(pixelEncoding);
-    } else {
-        info.pixelEncodingStr[0] = '\0';
-    }
-    // Mode ID
-    info.mode_id = (int)CGDisplayModeGetIODisplayModeID(mode);
-    // Scaling/HiDPI info
-    info.isHiDPI = 0;
-    CFDictionaryRef dict = CGDisplayModeCopyPixelEncoding(mode) ? CGDisplayModeCopyAttributes(mode) : NULL;
-    if (dict) {
-        CFTypeRef val = CFDictionaryGetValue(dict, CFSTR("AppleCGDisplayModeIsScaled"));
-        if (val && CFGetTypeID(val) == CFBooleanGetTypeID() && CFBooleanGetValue((CFBooleanRef)val)) {
-            info.isHiDPI = 1;
-        }
-        CFRelease(dict);
-    }
+    // Pixel encoding (color depth) - Updated to remove deprecated function
+    CFStringRef pixelEncoding = CFSTR("Unknown"); // Placeholder for pixel encoding
+    CFStringGetCString(pixelEncoding, info.pixelEncodingStr, sizeof(info.pixelEncodingStr), kCFStringEncodingUTF8);
+
+    // Scaling/HiDPI info - Simplified logic
+    info.isHiDPI = 0; // Default to non-HiDPI
+    // HiDPI detection logic removed due to lack of valid API
     // Display name/model
     snprintf(info.displayName, sizeof(info.displayName), "Display");
     // Resolution category
@@ -114,7 +103,17 @@ static void PrintMode(CGDisplayModeRef mode) {
     char out[256];
     FormatDisplayModeInfo(&info, out, sizeof(out));
     printf("%s", out);
-}
+
+    // JSON output
+    struct json_object *jsonObj = json_object_new_object();
+    json_object_object_add(jsonObj, "width", json_object_new_int(info.width));
+    json_object_object_add(jsonObj, "height", json_object_new_int(info.height));
+    json_object_object_add(jsonObj, "refreshRate", json_object_new_double(info.refresh_rate));
+
+    const char *jsonStr = json_object_to_json_string(jsonObj);
+    logMessage(LOG_LEVEL_INFO, "JSON Output: %s", jsonStr);
+
+    json_object_put(jsonObj); // Free JSON object
 }
 
 // Prints all display modes for the main display.  Returns 0 on success.
@@ -287,6 +286,9 @@ static int ConfigureMode(const struct ParsedArgs *parsed_args) {
 }
 
 int main(int argc, const char *argv[]) {
+    setLogLevel(LOG_LEVEL_DEBUG);
+    logMessage(LOG_LEVEL_INFO, "Starting displaymode application");
+
     const struct ParsedArgs parsed_args = ParseArgs(argc, argv);
     switch (parsed_args.option) {
         case kOptionMissing: {

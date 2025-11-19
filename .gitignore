@@ -4,4 +4,7 @@
 !*.xcworkspace/contents.xcworkspacedata
 # Ignore the displaymode target
 /displaymode
+# Ignore build artifacts
+/bin/
+/bin/tests/
 
