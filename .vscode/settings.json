@@ -1,0 +1,23 @@
+{
+    "files.associations": {
+        "*.html": "html",
+        "*.js": "javascript",
+        "*.json": "json",
+        "*.css": "css",
+        "*.scss": "scss",
+        "*.md": "markdown",
+        "*.ts": "typescript",
+        "*.php": "php",
+        "*.py": "python",
+        "*.sh": "shellscript",
+        "*.yml": "yaml",
+        "*.yaml": "yaml",
+        "*.xml": "xml",
+        "*.svg": "xml",
+        "*.go": "go",
+        "*.ini": "ini",
+        "*.conf": "ini",
+        "*.config": "ini",
+        "mactypes.h": "c"
+    }
+}

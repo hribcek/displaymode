@@ -1,0 +1,36 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "type": "cppbuild",
+            "label": "C/C++: clang build active file",
+            "command": "/usr/bin/clang",
+            "args": [
+                "-std=c11",
+                "-g",
+                "-O0",
+                "-mmacosx-version-min=10.14",
+                "-fsanitize=address,undefined",
+                "-fno-omit-frame-pointer",
+                "-Wall",
+                "${workspaceFolder}/displaymode.c",
+                "-o",
+                "${workspaceFolder}/displaymode",
+                "-lm",
+                "-framework", "CoreFoundation",
+                "-framework", "CoreGraphics"
+            ],
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
+            "problemMatcher": [
+                "$gcc"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "detail": "Compiler matches Xcode Debug settings with Sanitizers enabled."
+        }
+    ]
+}

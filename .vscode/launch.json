@@ -1,0 +1,29 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Debug displaymode",
+            "type": "cppdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/displaymode",
+            "args": [
+                "d"
+            ],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}",
+            "environment": [
+                {
+                    "name": "NSZombieEnabled",
+                    "value": "YES"
+                },
+                {
+                    "name": "MallocScribble",
+                    "value": "1"
+                }
+            ],
+            "externalConsole": false,
+            "MIMode": "lldb",
+            "preLaunchTask": "C/C++: clang build active file"
+        }
+    ]
+}
